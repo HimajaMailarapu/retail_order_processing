@@ -1,0 +1,61 @@
+version: "1"
+
+steps:
+  # performs all verification tasks in the project
+  - name: check
+    image: docker.target.com/tap/alpine-openjdk11-build:latest
+    ruleset:
+      event: [ push, pull_request ]
+    environment:
+      GRADLE_USER_HOME: ~/.gradle
+    commands:
+      - ./gradlew check
+
+  # build  project
+  - name: build
+    image: docker.target.com/tap/alpine-openjdk11-build:latest
+    ruleset:
+      event: [ pull_request, push ]
+    environment:
+      GRADLE_USER_HOME: .gradle
+    commands:
+      - ./gradlew build distTar
+
+  # build and publish test docker image to artifactory docker repo
+  - name: publish-docker-dev
+    ruleset:
+      event: push
+      branch: dev
+    image: docker.target.com/vela-plugins/kaniko:v0.6.0-1
+    pull: true
+    secrets: [ docker_username, docker_password ]
+    parameters:
+      registry: docker.target.com
+      repo: docker.target.com/himajagourishetti/retail-order-processing
+      dockerfile: Dockerfile
+      tags:
+        - "test-${BUILD_NUMBER}-${BUILD_COMMIT:0:8}"
+
+  - name: publish-docker-prod
+    ruleset:
+      event: push
+      branch: master
+    image: docker.target.com/vela-plugins/kaniko:v0.6.0-1
+    pull: true
+    secrets: [ docker_username, docker_password ]
+    parameters:
+    registry: docker.target.com
+    repo:  docker.target.com/himajagourishetti/retail-order-processing
+    dockerfile: Dockerfile
+    tags:
+      - "prod-${BUILD_NUMBER}-${BUILD_COMMIT:0:8}"
+
+secrets:
+  - name: docker_username
+    key: himajagourishetti/docker_username
+    engine: native
+    type: org
+  - name: docker_password
+    key: himajagourishetti/docker_password
+    engine: native
+    type: org

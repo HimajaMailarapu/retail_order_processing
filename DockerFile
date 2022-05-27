@@ -1,0 +1,10 @@
+FROM docker.target.com/mkpt/alpine-openjdk:11
+
+RUN wget -O /usr/local/bin/dumb-init https://binrepo.target.com/artifactory/cpe-yum-source/up-agent-tools/dumb-init_1.2.2_amd64 && \
+	chmod u+x /usr/local/bin/dumb-init
+
+ADD build/distributions/retail-order-processing.tar /
+
+ENTRYPOINT ["/usr/local/bin/dumb-init", "--", "/himajagourishetti/bin/retail-order-processing"]
+
+EXPOSE 9095
